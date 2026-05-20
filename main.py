@@ -2,36 +2,40 @@ import os
 import io
 import json
 import base64
+import secrets  # タイミング攻撃対策用に追加
 from typing import List
 from fastapi import FastAPI, HTTPException, status, UploadFile, File, Depends, Header
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from openai import OpenAI
 
-# 1. 初期設定（.envから環境変数を読み込む）
 load_dotenv()
 
 app = FastAPI(title="Image Metadata API")
 
 async def verify_rapidapi_secret(x_rapidapi_proxy_secret: str = Header(default=None)):
     """
-    RapidAPIからのリクエストであることを検証する依存関数。
-    環境変数 RAPIDAPI_PROXY_SECRET が設定されている場合、
-    ヘッダーの X-RapidAPI-Proxy-Secret と一致するか厳格にチェックします。
+    RapidAPIからのリクエストであることを厳格に検証。
     """
     expected_secret = os.environ.get("RAPIDAPI_PROXY_SECRET")
-    if expected_secret:
-        if x_rapidapi_proxy_secret != expected_secret:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Invalid or missing RapidAPI Proxy Secret"
-            )
+    
+    # 【修正2】環境変数自体が設定されていない場合は即座にエラー（バイパス防止）
+    if not expected_secret:
+        print("CRITICAL ERROR: RAPIDAPI_PROXY_SECRET is not set in environment variables.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Server configuration error."
+        )
+        
+    # 【修正5】secrets.compare_digestを使用してタイミング攻撃を防止
+    if not x_rapidapi_proxy_secret or not secrets.compare_digest(x_rapidapi_proxy_secret, expected_secret):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing RapidAPI Proxy Secret"
+        )
 
 @app.post("/analyze-image", dependencies=[Depends(verify_rapidapi_secret)])
 async def analyze_image(file: UploadFile = File(...)):
-    # =========================================
-    # 3. APIキーの安全な管理（セキュリティ）
-    # =========================================
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
         raise HTTPException(
@@ -41,49 +45,35 @@ async def analyze_image(file: UploadFile = File(...)):
 
     client = OpenAI(api_key=api_key)
     
-    # =========================================
-    # 2. 防御ロジック - 枚数制限
-    # =========================================
-    # FastAPIの File(...) により、ファイル未送信時は自動的に 422 エラーとなります。
-    # 複数ファイルが送信された場合も1つだけを抽出して安全に処理します。
     if not file:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Exactly one image file is required."
         )
     
-    # =========================================
-    # 2. 防御ロジック - 形式制限
-    # =========================================
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Only image files are allowed."
         )
     
-    # ファイル内容の読み込み
-    contents = await file.read()
+    # 【修正3】メモリ枯渇(OOM)防止: チャンクごとに読み込んでサイズ制限をかける
+    MAX_SIZE = 10 * 1024 * 1024  # 10MB
+    contents = b""
+    while chunk := await file.read(1024 * 1024):  # 1MBずつ読み込み
+        contents += chunk
+        if len(contents) > MAX_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="Image size must not exceed 10MB."
+            )
     
-    # =========================================
-    # 2. 防御ロジック - サイズ制限 (10MB)
-    # =========================================
-    if len(contents) > 10 * 1024 * 1024:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Image size must not exceed 10MB."
-        )
-
-    # =========================================
-    # 1. & コアロジックの継承
-    # =========================================
     try:
         from PIL import Image
-        # 画像フォーマット等に異常がないかPillowで確認
         img = Image.open(io.BytesIO(contents))
         if img.mode != 'RGB': 
             img = img.convert('RGB')
             
-        # 既存ロジック：最大1024pxにリサイズ
         if max(img.size) > 1024:
             img.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
         
@@ -96,7 +86,6 @@ async def analyze_image(file: UploadFile = File(...)):
             detail="Invalid image format or unable to process the image."
         )
     
-    # 既存ロジック：OpenAIへのプロンプト内容を完全維持
     prompt = """
         Analyze this image and provide:
         1. A catchy title (max 70 chars, no commas).
@@ -108,7 +97,6 @@ async def analyze_image(file: UploadFile = File(...)):
         """
         
     try:
-        # 既存ロジック：使用モデル（gpt-4o-mini）を完全維持
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             response_format={ "type": "json_object" },
@@ -120,11 +108,9 @@ async def analyze_image(file: UploadFile = File(...)):
         
         data = json.loads(response.choices[0].message.content)
         
-        # 既存ロジック：データ整形
         title = data.get('title', 'Untitled').replace(',', '')
         keywords = data.get('keywords', '')
         
-        # 既存のCSV出力と同じ「Filename, Title, Keywords」の構成で返却
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={
@@ -135,7 +121,9 @@ async def analyze_image(file: UploadFile = File(...)):
         )
         
     except Exception as e:
+        # 【修正4】詳細なエラーはサーバー側にのみ記録し、ユーザーには汎用エラーを返す
+        print(f"OpenAI API Error: {str(e)}") 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"OpenAI API processing failed: {str(e)}"
+            detail="An error occurred while analyzing the image."
         )
