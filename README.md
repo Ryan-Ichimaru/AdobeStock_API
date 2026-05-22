@@ -31,17 +31,14 @@ This API is currently provided as a "Beta" version. While the core functionality
 
 ### [English]
 * **High Precision:** Tailored prompt constraints guarantee exactly 50 relevant keywords and a descriptive title based on image content.
-* **Cost Protection:** Strictly limited to 1 image per request with validation to prevent accidental bulk-billing.
 * **Ready-to-Use Output:** Returns a clean JSON object containing `Filename`, `Title`, and a comma-separated `Keywords` string perfectly formatted for Adobe Stock.
 
 ### [日本語]
 * **高い精度:** 画像内容に基づき、正確なタイトルと厳密に50個の関連キーワードを生成します。
-* **コスト防御:** 1回のリクエストにつき画像1枚に制限するバリデーションを搭載し、不正な大量課金を防ぎます。
 * **即時利用可能な出力:** `Filename`、`Title`、およびカンマ区切りの `Keywords` 文字列を含むクリーンなJSONオブジェクトを返し、そのままAdobe Stockのメタデータとして活用できます。
 
 ### [繁體中文]
 * **高精確度:** 根據圖片內容，生成精確的標題與嚴格限制在 50 個的相關關鍵字。
-* **成本防護:** 限制每次請求僅能處理 1 張圖片，具備嚴格驗證機制以防止異常的大量計費。
 * **即開即用格式:** 返回包含 `Filename`、`Title` 以及以逗號分隔的 `Keywords` 字串的乾淨 JSON 物件，完全符合 Adobe Stock 的上傳規範。
 
 ---
