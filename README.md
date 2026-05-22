@@ -17,6 +17,16 @@ This API automatically analyzes your uploaded images using advanced AI and gener
 
 ---
 
+## ⚠️ Beta Version Notice / ベータ版に関するお知らせ / 測試版 (Beta) 須知
+### [English]
+This API is currently provided as a "Beta" version. While the core functionality for generating Adobe Stock metadata is fully operational, we are continuously refining the AI algorithms and adding improvements. Please note that you might occasionally encounter unexpected behaviors or temporary instability. We greatly appreciate your understanding and welcome any feedback to help us enhance the official release!
+### [日本語]
+現在、このAPIは「ベータ版」として提供されています。Adobe Stock用メタデータ生成のコア機能は完全に動作しておりますが、AIアルゴリズムの調整や継続的な品質改善を行っている段階です。そのため、稀に予期せぬエラーや一時的な不安定さが発生する可能性がありますことをあらかじめご了承ください。皆様からのフィードバックを基に、より良い正式版へとアップデートしてまいります！
+### [繁體中文]
+此 API 目前以「測試版 (Beta)」形式提供。雖然生成 Adobe Stock 元數據的核心功能已完全可運作，但我們仍在持續優化 AI 演算法與系統升級。請注意，使用過程中偶爾可能會遇到不可預期的錯誤或暫時的不穩定情況，敬請見諒。我們非常歡迎您的反饋，這將協助我們在正式版中提供更完善的服務！
+
+---
+
 ## 2. Key Features / 特徴 / 主要功能
 
 ### [English]
