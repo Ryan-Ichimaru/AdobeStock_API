@@ -3,6 +3,8 @@
 Multi-language documentation (English / 日本語 / 繁體中文) for the Adobe Stock Metadata & Tag Generator API.
 Available on RapidAPI / RapidAPIで利用可能 / 可在 RapidAPI 上使用
 
+🚀 Available on RapidAPI: https://rapidapi.com/s7ryo7/api/adobestock-metadata
+
 ---
 
 ## 1. Description / 概要 / 簡介
